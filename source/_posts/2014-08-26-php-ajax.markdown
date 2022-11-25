@@ -1,0 +1,55 @@
+---
+layout: post
+title: codeIgniter 結合 jquery ajax
+date: 2014-08-26 22:03:25 +0800
+comments: true
+categories: php
+---
+這算是這幾天所遇到的問題，由於是MVC架構，所以在實作ajax功能的時候也理所當然要遵守MVC的原則。
+因此，controller 自然就成為接收ajax的請求並處理的所在。這裡一個叫addajax的controller負責接收post請求，並載入model處理資料，
+最後在回應到view。
+
+```
+class Addajax extends CI_Controller {
+
+	public function __construct() {
+		parent::__construct();
+		$this->load->model("msg_model");
+	}
+
+	public function addRsp() {
+		$data = array(
+				"user_id"    => $this->input->post("user_id"),
+				"comment_id" => $this->input->post("comment_id"),
+				"response"   => $this->input->post("response")
+			    );
+
+		$this->msg_model->set_response($data);
+		$rsp = $this->msg_model->get_rsp();
+		$data = array_merge($name, $rsp);
+		echo json_encode($data);
+	}
+}	
+
+```
+比較麻煩的是csrf問題，一開始我怎麼ajax結果都顯示500錯誤，後來才知道CodeIgniter有自動的csrf驗證機制，form那裏會自動產生
+隱藏的欄位csrf的token，因此ajax必須將token一起傳回伺服器驗證無誤後才可成功。
+
+```
+$.ajax({
+	url: "<?php echo base_url(); ?>/addajax/addRsp",
+	type: "POST",
+	dataType: "json",
+	data: {
+		 user_id: userId,
+		 comment_id: cmt_id,
+		 response: rsp,
+		 csrf_test_name: token
+	  	},
+	}).done(function(data) {
+		  condole.log(data);
+	   }).fail(function(){
+		  console.log("error");
+		  });
+			
+```
